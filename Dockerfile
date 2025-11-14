@@ -15,5 +15,5 @@ EXPOSE 8080
 # Set environment variable for GCP
 ENV PORT=8080
 
-# Run the application
-CMD ["python", "main.py"]
+# Run the application with uvicorn
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
