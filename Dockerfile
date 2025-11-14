@@ -15,5 +15,5 @@ EXPOSE 8080
 # Set environment variable for GCP
 ENV PORT=8080
 
-# Run the application with uvicorn (using shell form to expand PORT variable)
-CMD exec uvicorn main:app --host 0.0.0.0 --port ${PORT}
+# Run the application with uvicorn (using shell to expand PORT variable)
+CMD ["/bin/sh", "-c", "exec uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
