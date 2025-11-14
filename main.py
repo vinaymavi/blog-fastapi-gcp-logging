@@ -1,17 +1,40 @@
 import structlog
 from fastapi import FastAPI, Request
-from google.cloud import logging as gcp_logging
 import os
+import logging
+import sys
 
-# Initialize GCP logging client
-try:
-    client = gcp_logging.Client()
-    client.setup_logging()
-except Exception:
-    # Fallback if not running in GCP or credentials not available
-    pass
+# Configure standard logging to stdout
+logging.basicConfig(
+    format="%(message)s",
+    stream=sys.stdout,
+    level=logging.INFO,
+)
 
-# Configure structlog for GCP
+# Custom processor to map log levels to GCP severity
+def add_gcp_severity(logger, method_name, event_dict):
+    """
+    Add GCP-compatible severity field based on log level.
+    GCP Cloud Logging recognizes: DEFAULT, DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, ALERT, EMERGENCY
+    """
+    level = event_dict.get("level", "").upper()
+    
+    # Map Python log levels to GCP severity levels
+    severity_mapping = {
+        "DEBUG": "DEBUG",
+        "INFO": "INFO",
+        "WARNING": "WARNING",
+        "ERROR": "ERROR",
+        "CRITICAL": "CRITICAL",
+    }
+    
+    # Add severity field for GCP
+    event_dict["severity"] = severity_mapping.get(level, "DEFAULT")
+    
+    return event_dict
+
+# Configure structlog to output JSON to stdout with GCP severity
+# GCP Cloud Logging automatically ingests JSON logs from stdout
 structlog.configure(
     processors=[
         structlog.stdlib.filter_by_level,
@@ -22,7 +45,8 @@ structlog.configure(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer()
+        add_gcp_severity,  # Add GCP severity mapping
+        structlog.processors.JSONRenderer(),
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
